@@ -7,8 +7,6 @@ use wasm_bindgen::prelude::*;
 extern crate fixedbitset;
 use fixedbitset::FixedBitSet;
 
-
-
 #[wasm_bindgen]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -65,52 +63,75 @@ impl Universe {
                 // };
                 // next[idx] = next_cell;
 
-                next.set(idx,match(cell,live_neighbors){
-                    (true,x) if x<2=>false,
-                    (true,2)|(true,3)=>true,
-                    (true,x) if x>3=>false,
-                    (false,3)=>true,
-                    (otherwise,_)=>otherwise,
-                });
+                next.set(
+                    idx,
+                    match (cell, live_neighbors) {
+                        (true, x) if x < 2 => false,
+                        (true, 2) | (true, 3) => true,
+                        (true, x) if x > 3 => false,
+                        (false, 3) => true,
+                        (otherwise, _) => otherwise,
+                    },
+                );
             }
         }
         self.cells = next;
     }
 
-    pub fn new()->Universe{
+    pub fn new() -> Universe {
+        utils::set_panic_hook();
+
         let width = 64;
         let height = 64;
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 
-        for i in 0..size{
-            cells.set(i,i%2==0||i%5==0);
+        for i in 0..size {
+            cells.set(i, i % 2 == 0 || i % 5 == 0);
         }
 
-        Universe{
+        Universe {
             width,
             height,
             cells,
         }
     }
 
-    pub fn render(&self)->String{
+    pub fn render(&self) -> String {
         self.to_string()
     }
 
-    pub fn width(&self)->u32{
+    pub fn width(&self) -> u32 {
         self.width
     }
-    pub fn height(&self)->u32{
+    pub fn height(&self) -> u32 {
         self.height
     }
-    
-    pub fn cells(&self)->*const usize{
+
+    pub fn cells(&self) -> *const usize {
         self.cells.as_slice().as_ptr()
     }
 
     fn get_cell(&self, index: usize) -> bool {
         self.cells[index]
+    }
+
+    pub fn set_width(&mut self, width: u32) {
+        self.width = width;
+        let size = (width * self.height) as usize;
+        self.cells = FixedBitSet::with_capacity(size);
+        for i in 0..size {
+            self.cells.set(i, false);
+        }
+    }
+
+    pub fn set_height(&mut self, height: u32) {
+        self.height = height;
+        let size = (self.width * height) as usize;
+        self.cells = FixedBitSet::with_capacity(size);
+        for i in 0..size {
+            self.cells.set(i, false);
+        }
     }
 }
 
@@ -125,5 +146,18 @@ impl fmt::Display for Universe {
             write!(f, "\n")?;
         }
         Ok(())
+    }
+}
+
+impl Universe {
+    pub fn get_cells(&self) -> &FixedBitSet {
+        &self.cells
+    }
+
+    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+        for (row, col) in cells.iter().cloned() {
+            let idx = self.get_index(row, col);
+            self.cells.set(idx, true);
+        }
     }
 }
